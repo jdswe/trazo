@@ -1,0 +1,12 @@
+[Unit]
+Description=Trazo: Wacom tablet driver
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/share/trazo/bin/trazo-daemon
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Trazo
+GenericName=Wacom Tablet
+Comment=Set up your Wacom tablet: tip feel, buttons, mapping and per-app profiles
+Exec=trazo
+Icon=io.github.jdswe.Trazo
+Terminal=false
+Type=Application
+Categories=Settings;HardwareSettings;GTK;
+Keywords=wacom;tablet;pen;stylus;pressure;drawing;
+StartupNotify=true

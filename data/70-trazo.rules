@@ -1,0 +1,4 @@
+# Trazo: lets the user of the active session read Wacom tablets and create
+# virtual input devices (uinput). OpenTabletDriver needs the same access.
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{idVendor}=="056a", TAG+="uaccess"

@@ -1,0 +1,66 @@
+/* Trazo effects, in the macOS / Macify "glass" style. */
+
+.trazo-ripple {
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  background-color: rgba(145, 65, 172, 0.32);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.35);
+}
+
+.trazo-ripple-right {
+  border-color: rgba(220, 138, 221, 0.95);
+  background-color: rgba(97, 53, 131, 0.38);
+}
+
+.trazo-hold {
+  border-radius: 999px;
+  border: 3px solid rgba(192, 97, 203, 0.95);
+  background-color: rgba(192, 97, 203, 0.12);
+}
+
+.trazo-precision {
+  border-radius: 10px;
+  border: 2px solid rgba(192, 97, 203, 0.9);
+  background-color: rgba(192, 97, 203, 0.07);
+}
+
+.trazo-radial-disc {
+  border-radius: 999px;
+  background-color: rgba(40, 36, 48, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+}
+
+.trazo-radial-item {
+  border-radius: 20px;
+  padding: 6px;
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.08);
+  transition-duration: 120ms;
+}
+
+.trazo-radial-item:hover,
+.trazo-radial-item:focus {
+  background-color: rgba(145, 65, 172, 0.92);
+}
+
+.trazo-radial-icon {
+  color: #ffffff;
+  padding-bottom: 4px;
+}
+
+.trazo-radial-label {
+  font-size: 8.5pt;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.trazo-radial-center {
+  border-radius: 999px;
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.16);
+}
+
+.trazo-radial-center:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}

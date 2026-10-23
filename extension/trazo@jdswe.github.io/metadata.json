@@ -1,0 +1,6 @@
+{
+  "uuid": "trazo@jdswe.github.io",
+  "name": "Trazo",
+  "description": "Trazo companion for Wacom tablets: per-application profiles, a single cursor, tap ripples and the radial menu.",
+  "shell-version": ["45", "46", "47", "48", "49", "50"]
+}

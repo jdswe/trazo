@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trazo — Wacom tablet settings for Linux</title>
+  <meta name="description" content="Trazo brings the features of Wacom Center to Linux: tip feel, pen buttons, mapping, per-app profiles, touch mode like Windows Ink and a radial menu, with a macOS-style interface.">
+  <meta property="og:title" content="Trazo — Wacom tablet settings for Linux">
+  <meta property="og:description" content="Your Wacom tablet, finally at home on Linux. Free and open source.">
+  <meta property="og:image" content="https://jdswe.github.io/trazo/assets/screenshot-pen.png">
+  <meta property="og:url" content="https://jdswe.github.io/trazo/">
+  <meta name="theme-color" content="#9141ac">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      --bg: #f4f2f8;
+      --text: #1d1d1f;
+      --muted: #6e6e73;
+      --glass: rgba(255, 255, 255, 0.55);
+      --glass-strong: rgba(255, 255, 255, 0.78);
+      --glass-edge: rgba(255, 255, 255, 0.85);
+      --hairline: rgba(60, 40, 90, 0.10);
+      --shadow: 0 18px 50px rgba(70, 40, 100, 0.14);
+      --accent: #9141ac;
+      --accent-2: #c061cb;
+      --code-bg: rgba(29, 29, 31, 0.92);
+      --radius: 22px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #141218;
+        --text: #f5f5f7;
+        --muted: #a1a1a6;
+        --glass: rgba(255, 255, 255, 0.07);
+        --glass-strong: rgba(40, 36, 48, 0.82);
+        --glass-edge: rgba(255, 255, 255, 0.16);
+        --hairline: rgba(255, 255, 255, 0.10);
+        --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+        --code-bg: rgba(0, 0, 0, 0.55);
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    body {
+      margin: 0;
+      font-family: -apple-system, "SF Pro Display", "SF Pro Text", "Inter", "Segoe UI",
+        system-ui, sans-serif;
+      color: var(--text);
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(circle at 10% 0%, rgba(192, 97, 203, 0.32), transparent 40%),
+        radial-gradient(circle at 92% 8%, rgba(98, 160, 234, 0.30), transparent 42%),
+        radial-gradient(circle at 75% 60%, rgba(255, 163, 72, 0.16), transparent 45%),
+        radial-gradient(circle at 15% 85%, rgba(87, 227, 137, 0.12), transparent 40%);
+      background-attachment: fixed;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .wrap { width: min(1120px, 100% - 32px); margin: 0 auto; }
+
+    /* Navigation: floating glass capsule */
+    nav {
+      position: sticky; top: 12px; z-index: 10;
+      width: min(1120px, 100% - 32px); margin: 12px auto 0;
+      display: flex; align-items: center; gap: 18px;
+      padding: 10px 14px 10px 16px;
+      border-radius: 999px;
+      background: var(--glass);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      box-shadow: inset 0 1px var(--glass-edge), 0 8px 30px rgba(70, 40, 100, 0.10);
+    }
+    nav .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text); }
+    nav .brand img { width: 28px; height: 28px; }
+    nav .links { display: flex; gap: 18px; margin-left: auto; font-size: 15px; }
+    nav .links a { color: var(--text); opacity: 0.8; }
+    nav .links a:hover { opacity: 1; text-decoration: none; }
+    @media (max-width: 720px) { nav .links a.optional { display: none; } }
+
+    .button {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 22px; border-radius: 999px;
+      font-weight: 600; font-size: 16px; border: 0; cursor: pointer;
+      text-decoration: none !important;
+    }
+    .button.primary {
+      color: #fff;
+      background-image: linear-gradient(to bottom, var(--accent-2), #813d9c);
+      box-shadow: inset 0 1px rgba(255, 255, 255, 0.45), 0 8px 22px rgba(129, 61, 156, 0.35);
+    }
+    .button.glass {
+      color: var(--text);
+      background: var(--glass);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      box-shadow: inset 0 1px var(--glass-edge), 0 6px 18px rgba(70, 40, 100, 0.08);
+    }
+    nav .button { padding: 8px 16px; font-size: 14px; }
+
+    /* Hero */
+    .hero { text-align: center; padding: 72px 0 24px; }
+    .hero .icon { width: 112px; height: 112px; filter: drop-shadow(0 16px 30px rgba(129, 61, 156, 0.35)); }
+    .hero h1 { font-size: clamp(44px, 8vw, 80px); line-height: 1.02; margin: 18px 0 8px; letter-spacing: -0.03em; }
+    .hero .tagline {
+      font-size: clamp(22px, 3.4vw, 32px); font-weight: 600; margin: 0 0 16px;
+      background: linear-gradient(90deg, var(--accent), #1c71d8);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .hero p.lead { font-size: 19px; color: var(--muted); max-width: 680px; margin: 0 auto 28px; }
+    .hero .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .hero .meta { margin-top: 14px; font-size: 14px; color: var(--muted); }
+    .shot {
+      margin: 48px auto 0; width: min(1024px, 100%);
+      border-radius: 16px; overflow: hidden;
+      box-shadow: var(--shadow), 0 0 0 1px var(--hairline);
+    }
+    .shot img { display: block; width: 100%; height: auto; }
+
+    section { padding: 72px 0 8px; }
+    section > .wrap > h2 { font-size: clamp(30px, 4.5vw, 44px); letter-spacing: -0.02em; margin: 0 0 8px; text-align: center; }
+    section > .wrap > p.sub { text-align: center; color: var(--muted); font-size: 18px; margin: 0 auto 36px; max-width: 640px; }
+
+    /* Glass cards */
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+    .card {
+      padding: 22px; border-radius: var(--radius);
+      background: var(--glass);
+      backdrop-filter: blur(24px) saturate(170%);
+      -webkit-backdrop-filter: blur(24px) saturate(170%);
+      box-shadow: inset 0 1px var(--glass-edge), inset 0 0 0 1px var(--hairline), 0 10px 30px rgba(70, 40, 100, 0.06);
+    }
+    .card h3 { margin: 14px 0 6px; font-size: 18px; }
+    .card p { margin: 0; color: var(--muted); font-size: 15px; }
+    .tile {
+      width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center;
+      color: #fff; box-shadow: inset 0 1px rgba(255, 255, 255, 0.45), 0 4px 12px rgba(0, 0, 0, 0.12);
+    }
+    .tile svg { width: 22px; height: 22px; }
+    .purple { background: linear-gradient(#d27ddb, #813d9c); }
+    .blue { background: linear-gradient(#7fb4f0, #1c71d8); }
+    .orange { background: linear-gradient(#ffb366, #e66100); }
+    .green { background: linear-gradient(#6fe89a, #26a269); }
+    .gray { background: linear-gradient(#a8a7a4, #5e5c64); }
+    .red { background: linear-gradient(#f77b6d, #c01c28); }
+
+    /* Gallery */
+    .gallery { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+    .gallery figure { margin: 0; }
+    .gallery img {
+      width: 100%; height: auto; display: block; border-radius: 16px;
+      box-shadow: var(--shadow), 0 0 0 1px var(--hairline);
+    }
+    .gallery figcaption { text-align: center; color: var(--muted); font-size: 15px; margin-top: 12px; }
+
+    /* Install */
+    .steps { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+    .step-number {
+      width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+      font-weight: 700; color: #fff; background: linear-gradient(#d27ddb, #813d9c);
+    }
+    pre {
+      position: relative; margin: 14px 0 0; padding: 14px 16px; border-radius: 14px;
+      background: var(--code-bg); color: #f5f5f7; overflow-x: auto; font-size: 14px;
+      font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    }
+    pre button {
+      position: absolute; top: 8px; right: 8px; border: 0; border-radius: 999px;
+      padding: 4px 10px; font-size: 12px; cursor: pointer; color: #fff;
+      background: rgba(255, 255, 255, 0.16);
+    }
+    pre button:hover { background: rgba(255, 255, 255, 0.28); }
+    .note { margin-top: 16px; color: var(--muted); font-size: 15px; text-align: center; }
+
+    /* How it works */
+    .layers { display: grid; gap: 12px; max-width: 760px; margin: 0 auto; }
+    .layer { display: flex; gap: 16px; align-items: center; }
+    .layer .card { flex: 1; display: flex; gap: 16px; align-items: center; padding: 18px 20px; }
+    .layer .card h3 { margin: 0 0 2px; }
+
+    details {
+      max-width: 760px; margin: 0 auto 12px; padding: 18px 22px; border-radius: 18px;
+      background: var(--glass); box-shadow: inset 0 1px var(--glass-edge), inset 0 0 0 1px var(--hairline);
+    }
+    details summary { cursor: pointer; font-weight: 600; font-size: 17px; }
+    details p { color: var(--muted); margin: 10px 0 0; }
+
+    footer { padding: 64px 0 48px; text-align: center; color: var(--muted); font-size: 14px; }
+    footer p { margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <nav aria-label="Main">
+    <a class="brand" href="#top"><img src="assets/icon.svg" alt="">Trazo</a>
+    <div class="links">
+      <a class="optional" href="#features">Features</a>
+      <a class="optional" href="#install">Install</a>
+      <a class="optional" href="#how">How it works</a>
+      <a href="https://github.com/jdswe/trazo">GitHub</a>
+    </div>
+    <a class="button primary" href="#install">Download</a>
+  </nav>
+
+  <header class="hero wrap" id="top">
+    <img class="icon" src="assets/icon.svg" alt="Trazo app icon">
+    <h1>Trazo</h1>
+    <p class="tagline">Your Wacom tablet, finally at home on Linux.</p>
+    <p class="lead">Everything Wacom Center does on Windows and macOS — tip feel, pen buttons,
+      mapping, per-app profiles, touch mode and a radial menu — in a native app that looks
+      like it belongs on your Mac-style desktop.</p>
+    <div class="actions">
+      <a class="button primary" id="download-deb" href="https://github.com/jdswe/trazo/releases/download/v0.1.0/trazo_0.1.0_all.deb">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-5-5m5 5 5-5M5 21h14"/></svg>
+        Download for Ubuntu (.deb)
+      </a>
+      <a class="button glass" href="#install">Other ways to install</a>
+    </div>
+    <p class="meta">Free and open source · <span id="version">v0.1.0</span> · GNOME 45 or newer · MIT license</p>
+    <div class="shot"><img src="assets/screenshot-pen.png" width="1024" height="768"
+      alt="Trazo's Pen page: a pen illustration with cards for the upper button, lower button and tip"></div>
+  </header>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>Everything Wacom Center does.</h2>
+      <p class="sub">And a few things it only does on Windows, like touch mode and tap ripples.</p>
+      <div class="grid">
+        <div class="card"><div class="tile purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 20c4-1 6-9 9-12s6-2 9-4"/></svg></div>
+          <h3>Tip feel</h3><p>Soft to firm, click threshold, maximum pressure and a curve you shape by dragging — with a live test area.</p></div>
+        <div class="card"><div class="tile purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 7v4"/></svg></div>
+          <h3>Pen buttons</h3><p>Any action on any button: clicks, keystrokes, modifiers, pan/scroll, undo, zoom, precision mode and more.</p></div>
+        <div class="card"><div class="tile blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></div>
+          <h3>Mapping</h3><p>All displays, one display or any portion. Pick the tablet area, rotate it, force proportions or define it with the pen.</p></div>
+        <div class="card"><div class="tile green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg></div>
+          <h3>Per-app profiles</h3><p>Different settings for Krita, Xournal++ or your browser. Trazo switches as soon as the app comes to the front.</p></div>
+        <div class="card"><div class="tile blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11V5a2 2 0 1 1 4 0v6m0-2a2 2 0 1 1 4 0v4a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-3l-2-4a2 2 0 0 1 3-2l1 2"/></svg></div>
+          <h3>Touch mode</h3><p>Like Windows Ink: drag to scroll with momentum, tap to click, press and hold for a right click.</p></div>
+        <div class="card"><div class="tile orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/></svg></div>
+          <h3>Radial menu</h3><p>A glass menu that opens at the pen tip with eight actions of your choice, like Wacom's on-screen shortcuts.</p></div>
+        <div class="card"><div class="tile purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m5 3 14 8-6 2-3 6z"/></svg></div>
+          <h3>One cursor</h3><p>The pen is also the mouse: one cursor, and the dock, hot corners and menus react when the pen hovers.</p></div>
+        <div class="card"><div class="tile gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div>
+          <h3>Diagnostics</h3><p>Live pressure, position, buttons and report rate — the same data Wacom Center shows.</p></div>
+        <div class="card"><div class="tile red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m12 3 2.5 6.5L21 10l-5 4.5L17.5 21 12 17.5 6.5 21 8 14.5 3 10l6.5-.5z"/></svg></div>
+          <h3>Setup Assistant</h3><p>A few friendly questions on first launch: your hand, your buttons, your displays. Done.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="screens">
+    <div class="wrap">
+      <h2>Made to feel like a Mac.</h2>
+      <p class="sub">A System Settings layout with Liquid Glass, built with GTK 4 and libadwaita. It follows your theme, in light and dark.</p>
+      <div class="gallery">
+        <figure><img src="assets/screenshot-mapping.png" width="748" height="768" loading="lazy" alt="Mapping page with the tablet and both displays side by side"><figcaption>Map the tablet to any display</figcaption></figure>
+        <figure><img src="assets/screenshot-radial.png" width="748" height="768" loading="lazy" alt="Radial menu page with eight actions arranged in a circle"><figcaption>Design your radial menu</figcaption></figure>
+        <figure><img src="assets/screenshot-apps.png" width="748" height="768" loading="lazy" alt="Applications page with touch mode for browsers and profiles"><figcaption>Profiles for every app</figcaption></figure>
+        <figure><img src="assets/screenshot-general.png" width="748" height="768" loading="lazy" alt="General page with status and behavior switches"><figcaption>One switch for one cursor</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2>Install in a minute.</h2>
+      <p class="sub">For Ubuntu, Debian and other GNOME desktops with Python 3, GTK 4 and libadwaita.</p>
+      <div class="steps">
+        <div class="card">
+          <div class="step-number">1</div>
+          <h3>Download</h3>
+          <p>Get the package for Ubuntu and Debian.</p>
+          <p style="margin-top:14px"><a class="button primary" id="download-deb-2" href="https://github.com/jdswe/trazo/releases/download/v0.1.0/trazo_0.1.0_all.deb">trazo_0.1.0_all.deb</a></p>
+        </div>
+        <div class="card">
+          <div class="step-number">2</div>
+          <h3>Install</h3>
+          <p>From the folder where you downloaded it:</p>
+          <pre><code id="cmd-deb">sudo apt install ./trazo_0.1.0_all.deb</code><button type="button" data-copy="cmd-deb">Copy</button></pre>
+        </div>
+        <div class="card">
+          <div class="step-number">3</div>
+          <h3>Log out and back in</h3>
+          <p>That turns on the service and the GNOME extension. Then open <strong>Trazo</strong> from the app grid and follow the Setup Assistant.</p>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3 style="margin-top:0">Any other distribution: per-user install</h3>
+        <p>Download <a id="download-tar" href="https://github.com/jdswe/trazo/releases/download/v0.1.0/trazo-0.1.0.tar.gz">trazo-0.1.0.tar.gz</a>, extract it and run the installer as your normal user. It asks for your password once, to grant access to the tablet.</p>
+        <pre><code id="cmd-tar">tar xf trazo-0.1.0.tar.gz &amp;&amp; cd trazo-0.1.0 &amp;&amp; ./install.sh</code><button type="button" data-copy="cmd-tar">Copy</button></pre>
+      </div>
+      <p class="note">Every release lists SHA-256 checksums. <a href="https://github.com/jdswe/trazo/releases">All releases</a></p>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="wrap">
+      <h2>How it works.</h2>
+      <p class="sub">The same three layers as the official driver — all open source.</p>
+      <div class="layers">
+        <div class="layer"><div class="card"><div class="tile blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h10M7 13h6"/></svg></div>
+          <div><h3>Trazo app</h3><p>The settings window. It saves your profiles and talks to the service over D-Bus.</p></div></div></div>
+        <div class="layer"><div class="card"><div class="tile purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg></div>
+          <div><h3>trazo-daemon</h3><p>A user service that takes exclusive control of the pen, applies the curve, area, buttons and profile, and sends the result to GNOME through a virtual pen, mouse and keyboard.</p></div></div></div>
+        <div class="layer"><div class="card"><div class="tile gray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></div>
+          <div><h3>Linux kernel + GNOME Shell extension</h3><p>The kernel's own <code>wacom</code> driver talks to the hardware. A small extension reports the focused app and draws the cursor, ripples and radial menu.</p></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap">
+      <h2>Questions.</h2>
+      <p class="sub">&nbsp;</p>
+      <details><summary>Which tablets work?</summary>
+        <p>Trazo is built for Wacom pen tablets handled by the Linux <code>wacom</code> driver, and it is tested with the One by Wacom S (CTL-472). Other Wacom pen tablets should work; ExpressKeys and touch rings are not supported yet.</p></details>
+      <details><summary>Does it need GNOME?</summary>
+        <p>Yes. Trazo is built and tested for GNOME 45 or newer on Wayland: it reads your display layout and tablet settings from GNOME, and its extension powers per-app profiles, the single cursor, ripples and the radial menu. Other desktops are not supported yet.</p></details>
+      <details><summary>Is it safe?</summary>
+        <p>Trazo installs one udev rule that lets the user of the active session read Wacom tablets and create virtual input devices (uinput) — the same access OpenTabletDriver needs. It never runs as root. The code is open for anyone to review.</p></details>
+      <details><summary>How do I uninstall it?</summary>
+        <p>With the package: <code>sudo apt remove trazo</code>. With the per-user install: run <code>./uninstall.sh</code> from the extracted folder. Your tablet goes back to GNOME's own settings.</p></details>
+      <details><summary>Is Trazo made by Wacom?</summary>
+        <p>No. Trazo is an independent open source project and is not affiliated with or endorsed by Wacom. Wacom is a trademark of Wacom Co., Ltd.</p></details>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <p><a href="https://github.com/jdswe/trazo">Source code on GitHub</a> · <a href="https://github.com/jdswe/trazo/issues">Report a problem</a> · <a href="https://jdswe.github.io/macify/">Macify</a></p>
+      <p>Made by Jose David Carranza Angarita · MIT license</p>
+    </div>
+  </footer>
+
+  <script>
+    // Copy buttons for the install commands.
+    document.querySelectorAll("pre button[data-copy]").forEach(button => {
+      button.addEventListener("click", async () => {
+        const text = document.getElementById(button.dataset.copy).textContent;
+        try {
+          await navigator.clipboard.writeText(text);
+          button.textContent = "Copied";
+        } catch {
+          button.textContent = "Select and copy";
+        }
+        setTimeout(() => { button.textContent = "Copy"; }, 1600);
+      });
+    });
+
+    // Point the download links at the newest release (falls back to v0.1.0).
+    fetch("https://api.github.com/repos/jdswe/trazo/releases/latest")
+      .then(response => response.ok ? response.json() : null)
+      .then(release => {
+        if (!release) return;
+        const deb = release.assets.find(a => a.name.endsWith(".deb"));
+        const tar = release.assets.find(a => a.name.endsWith(".tar.gz"));
+        const version = release.tag_name.replace(/^v/, "");
+        document.getElementById("version").textContent = release.tag_name;
+        if (deb) {
+          for (const id of ["download-deb", "download-deb-2"]) {
+            document.getElementById(id).href = deb.browser_download_url;
+          }
+          document.getElementById("download-deb-2").textContent = deb.name;
+          document.getElementById("cmd-deb").textContent = `sudo apt install ./${deb.name}`;
+        }
+        if (tar) {
+          const link = document.getElementById("download-tar");
+          link.href = tar.browser_download_url;
+          link.textContent = tar.name;
+          document.getElementById("cmd-tar").textContent =
+            `tar xf ${tar.name} && cd trazo-${version} && ./install.sh`;
+        }
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>
