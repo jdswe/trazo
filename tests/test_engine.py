@@ -123,6 +123,76 @@ class EngineTest(unittest.TestCase):
         self.frame(0.6, 0.6, prox=False)  # on leaving, the pointer stays where the pen was
         self.assertAlmostEqual(self.sink.named("pointer_move")[-1][1][0], 0.6, places=3)
 
+    def resting_pen(self, frames=40, x=0.5, y=0.5):
+        """A pen lying on the tablet: in proximity, reporting ~0.006 mm of jitter."""
+        for i in range(frames):
+            self.frame(x + (0.00004 if i % 2 else -0.00004), y)
+
+    def test_resting_pen_does_not_move_the_pointer(self):
+        # Regression: a pen in proximity reports ~133 times a second even when
+        # nobody touches it; every jitter used to warp the pointer back to it.
+        self.engine.hover_pointer = True
+        self.resting_pen()
+        self.assertFalse(self.sink.named("pointer_move"))
+
+    def test_lifting_a_pen_that_was_never_used_does_not_warp_the_pointer(self):
+        self.resting_pen()
+        self.frame(prox=False)
+        self.assertFalse(self.sink.named("pointer_move"))
+
+    def test_mouse_takes_over_from_a_pen_in_proximity(self):
+        # Regression: after using the pen, the mouse could no longer move the
+        # cursor while the pen stayed near the tablet.
+        self.engine.hover_pointer = True
+        self.frame(0.3, 0.5)
+        self.frame(0.5, 0.5)
+        self.assertTrue(self.sink.named("pointer_move"))
+        self.engine.mouse_active()
+        self.assertFalse(self.sink.last_pen.prox)  # the pen's own cursor goes away
+        before = len(self.sink.calls)
+        self.resting_pen(x=0.5)
+        self.frame(prox=False)
+        self.assertEqual(self.sink.calls[before:], [])  # no pen output, no pointer warp
+
+    def test_pen_takes_the_cursor_back_when_it_really_moves(self):
+        self.engine.hover_pointer = True
+        self.frame(0.3, 0.5)
+        self.frame(0.5, 0.5)
+        self.engine.mouse_active()
+        self.frame(0.505, 0.5)  # 0.8 mm: still the mouse's cursor
+        self.assertFalse(self.sink.last_pen.prox)
+        self.frame(0.53, 0.5)  # 4.6 mm: deliberate movement
+        self.assertTrue(self.sink.last_pen.prox)
+        self.assertAlmostEqual(self.sink.named("pointer_move")[-1][1][0], 0.53, places=3)
+
+    def test_pen_takes_the_cursor_back_on_a_tap(self):
+        self.frame(0.3, 0.5)
+        self.frame(0.5, 0.5)
+        self.engine.mouse_active()
+        state = self.frame(0.5, 0.5, p=0.5)
+        self.assertTrue(state.prox)
+        self.assertTrue(state.touch)
+
+    def test_mouse_stops_touch_scroll_momentum(self):
+        # Momentum scrolls through the pointer at the pen's position; it must
+        # not keep pulling the pointer once the mouse is used.
+        self.touch_profile()
+        self.frame(0.5, 0.3)
+        for i in range(8):
+            self.frame(0.5, 0.3 + i * 0.03, p=0.5)
+        self.frame(0.5, 0.51, p=0.0)
+        self.frame(0.5, 0.51, prox=False)
+        self.assertTrue(self.engine.needs_tick)
+        self.engine.mouse_active()
+        before = len(self.sink.named("scroll"))
+        self.engine.tick(self.clock.now + 0.05)
+        self.assertEqual(len(self.sink.named("scroll")), before)
+
+    def test_mouse_activity_while_drawing_is_ignored(self):
+        self.frame(0.5, 0.5, p=0.5)
+        self.engine.mouse_active()
+        self.assertTrue(self.frame(0.52, 0.5, p=0.5).touch)
+
     def test_unified_cursor_can_be_disabled(self):
         self.engine.set_profile(self.profile, dict(ADVANCED, unified_cursor=False), 400)
         self.frame(0.3, 0.6)
@@ -351,7 +421,7 @@ class EngineTest(unittest.TestCase):
         self.frame(x=0.1, y=0.2, p=0.0)
         self.frame(x=0.6, y=0.7, p=0.5)
         self.assertEqual(captured[0][0], "tablet")
-        for got, want in zip(captured[0][1], [0.1, 0.2, 0.5, 0.5]):
+        for got, want in zip(captured[0][1], [0.1, 0.2, 0.5, 0.5], strict=True):
             self.assertAlmostEqual(got, want, places=3)
 
     def test_pressure_hold(self):

@@ -83,7 +83,7 @@ dpkg-deb --root-owner-group --build "$ROOT" "$DIST/trazo_${VERSION}_all.deb" >/d
 NAME="trazo-$VERSION"
 mkdir -p "$BUILD/$NAME"
 cp -r "$SRC/trazo" "$SRC/bin" "$SRC/data" "$SRC/extension" "$SRC/tests" \
-  "$SRC/install.sh" "$SRC/uninstall.sh" "$SRC/README.md" "$SRC/LICENSE" "$BUILD/$NAME/"
+  "$SRC/install.sh" "$SRC/uninstall.sh" "$SRC/README.md" "$SRC/CHANGELOG.md" "$SRC/LICENSE" "$BUILD/$NAME/"
 find "$BUILD/$NAME" -name __pycache__ -prune -exec rm -rf {} +
 tar -C "$BUILD" --owner=0 --group=0 -czf "$DIST/$NAME.tar.gz" "$NAME"
 

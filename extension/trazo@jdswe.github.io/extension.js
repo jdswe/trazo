@@ -11,6 +11,8 @@ import St from 'gi://St';
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
+import {CursorOwnership} from './ownership.js';
+
 const BUS_NAME = 'io.github.jdswe.TrazoShell';
 const OBJECT_PATH = '/io/github/jdswe/TrazoShell';
 const INTERFACE = `
@@ -42,6 +44,7 @@ const INTERFACE = `
     <signal name="RadialActivated">
       <arg type="i" name="index"/>
     </signal>
+    <signal name="MouseActive"/>
   </interface>
 </node>`;
 
@@ -53,6 +56,11 @@ const PEN_DEVICES = [
 const MOUSE_DEVICES = [
     Clutter.InputDeviceType.POINTER_DEVICE,
     Clutter.InputDeviceType.TOUCHPAD_DEVICE,
+];
+const MOUSE_EVENTS = [
+    Clutter.EventType.MOTION,
+    Clutter.EventType.BUTTON_PRESS,
+    Clutter.EventType.SCROLL,
 ];
 const RADIAL_RADIUS = 104;
 const RADIAL_ITEM = 76;
@@ -70,7 +78,8 @@ export default class TrazoShellExtension extends Extension {
     enable() {
         this._windowTracker = Shell.WindowTracker.get_default();
         this._current = this._focusedApp();
-        this._penActive = false;
+        this._ownership = new CursorOwnership();
+        this._mouseHidden = false;
         this._hold = null;
         this._overlay = null;
         this._radial = null;
@@ -87,7 +96,7 @@ export default class TrazoShellExtension extends Extension {
 
     disable() {
         Clutter.Event.remove_filter(this._filterId);
-        this._setPenActive(false);
+        this._setMouseHidden(false);
         this._closeRadial(-1, false);
         this.HideOverlay();
         this._stopHold();
@@ -120,42 +129,47 @@ export default class TrazoShellExtension extends Extension {
     }
 
     // --- Single cursor -------------------------------------------------------
-    // GNOME draws one cursor for the pen and another for the mouse. While the
-    // pen is near the tablet the mouse cursor is hidden; moving a real mouse
-    // (not Trazo's virtual pointer) shows it again.
+    // GNOME draws one cursor for the pen and another for the mouse. The last
+    // device used on purpose owns the cursor (see ownership.js): the mouse
+    // cursor hides while the pen is in use, and a real mouse (not Trazo's
+    // virtual pointer) always takes it back, even with the pen lying on the
+    // tablet. Trazo is told so it stops moving the pointer for the pen.
     _onEvent(event) {
         try {
             const device = event.get_source_device?.() ?? event.get_device();
             const type = event.type();
             const deviceType = device?.get_device_type();
             if (PEN_DEVICES.includes(deviceType)) {
-                if (type === Clutter.EventType.PROXIMITY_OUT)
-                    this._setPenActive(false);
-                else if (type !== Clutter.EventType.PROXIMITY_IN || !this._penActive)
-                    this._setPenActive(true);
-            } else if (this._penActive && MOUSE_DEVICES.includes(deviceType) &&
-                       type === Clutter.EventType.MOTION &&
+                const [x, y] = event.get_coords();
+                this._ownership.penEvent({
+                    leaving: type === Clutter.EventType.PROXIMITY_OUT,
+                    x, y,
+                    pressed: type === Clutter.EventType.BUTTON_PRESS,
+                });
+            } else if (MOUSE_DEVICES.includes(deviceType) && MOUSE_EVENTS.includes(type) &&
                        !(device.get_device_name() ?? '').startsWith('Trazo')) {
-                this._setPenActive(false);
+                if (this._ownership.mouseEvent(GLib.get_monotonic_time() / 1000))
+                    this._dbus?.emit_signal('MouseActive', null);
             }
+            this._setMouseHidden(this._ownership.hideMouseCursor);
         } catch (e) {
             logError(e, 'Trazo');
         }
         return Clutter.EVENT_PROPAGATE;
     }
 
-    _setPenActive(active) {
-        if (active === this._penActive)
+    _setMouseHidden(hidden) {
+        if (hidden === this._mouseHidden)
             return;
-        this._penActive = active;
+        this._mouseHidden = hidden;
         const tracker = global.backend.get_cursor_tracker();
         if (tracker.inhibit_cursor_visibility) {
-            if (active)
+            if (hidden)
                 tracker.inhibit_cursor_visibility();
             else
                 tracker.uninhibit_cursor_visibility();
         } else {
-            tracker.set_pointer_visible(!active);
+            tracker.set_pointer_visible(!hidden);
         }
     }
 

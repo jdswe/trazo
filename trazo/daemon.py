@@ -309,6 +309,9 @@ class Daemon:
         self.bus.signal_subscribe(gnome.SHELL_BUS, gnome.SHELL_IFACE, "RadialActivated",
                                   gnome.SHELL_PATH, None, Gio.DBusSignalFlags.NONE,
                                   self._radial_activated)
+        self.bus.signal_subscribe(gnome.SHELL_BUS, gnome.SHELL_IFACE, "MouseActive",
+                                  gnome.SHELL_PATH, None, Gio.DBusSignalFlags.NONE,
+                                  self._mouse_active)
         for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
             GLib.unix_signal_add(GLib.PRIORITY_DEFAULT, sig, self._quit)
         self._connect()
@@ -476,6 +479,11 @@ class Daemon:
         if self.usb_id and self.usb_id in self.took_over:
             gnome.take_over(self.usb_id)
         return GLib.SOURCE_REMOVE
+
+    def _mouse_active(self, *_args):
+        # The real mouse was used: it takes the cursor back from the pen.
+        if self.engine:
+            self.engine.mouse_active()
 
     # --- Radial menu -------------------------------------------------------
     def _radial_items(self):

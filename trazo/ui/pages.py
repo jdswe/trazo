@@ -545,7 +545,7 @@ class RadialPage(Page):
         return self.window.config["radial_menu"]
 
     def populate(self):
-        for row, action in zip(self.slot_rows, self.items):
+        for row, action in zip(self.slot_rows, self.items, strict=True):
             row.set_subtitle(cfg.action_label(action))
             row.icon.set_from_icon_name(cfg.ACTION_ICONS.get(action.get("type")))
         self.preview.set_items(self.items)
