@@ -27,6 +27,7 @@ HOLD_TIME = 0.6            # touch mode: holding still = right click
 MOMENTUM_TAU = 0.35        # s, how long momentum lasts after a flick
 MOMENTUM_MIN = 90.0        # wheel units/s below which momentum stops
 POINTER_EPSILON = 0.0002   # minimum (normalized) motion to move the pointer
+RECLAIM_MM = 2.0           # a pen near the tablet counts as "in use" after moving this much
 
 # Virtual pen codes for each click. The service sets GNOME up so BTN_STYLUS is
 # middle click, BTN_STYLUS2 right click and BTN_STYLUS3 back.
@@ -110,6 +111,10 @@ class Engine:
         # extension can hide the duplicate cursor; otherwise GNOME would show
         # two cursors.
         self.hover_pointer = False
+        # Last device used on purpose owns the cursor, like on Windows and
+        # macOS: once the real mouse moves, the pen stays quiet until it is
+        # moved, tapped or a button is pressed.
+        self.mouse_owns = False
         self._raw = {"x": 0, "y": 0, "p": 0, "d": 0, "tool": None,
                      "lower": False, "upper": False}
         self._dropped = False
@@ -153,6 +158,9 @@ class Engine:
         self.mouse_acc = [0.0, 0.0]
         self.last_pen_uv = None
         self.last_pointer_uv = None
+        self.raw_xy = (0.0, 0.0)
+        self.claim_anchor = None
+        self.pen_used = False
 
     # --- Configuration -----------------------------------------------------
     def set_profile(self, profile, advanced, double_click_ms=400, profile_id=None):
@@ -259,9 +267,16 @@ class Engine:
         self._emitted_mode = self.mode
 
         if raw["tool"] is None:
+            # The pen really left: the next approach starts fresh.
             if self.prox:
                 self._prox_out()
+            self.mouse_owns = False
+            self.pen_used = False
+            self.claim_anchor = None
             return
+        self.raw_xy = (self.absx.normalize(raw["x"]), self.absy.normalize(raw["y"]))
+        if not self._pen_in_use(raw):
+            return  # the mouse owns the cursor and the pen is just lying there
         if not self.prox:
             self.prox = True
             self.mouse_last = None
@@ -309,6 +324,37 @@ class Engine:
             self._mouse_motion(now)
         else:
             self._emit_pen(distance)
+
+    def _pen_in_use(self, raw):
+        """Tracks whether the pen is used on purpose rather than just lying
+        near the tablet: a Wacom pen in proximity reports ~133 times a second
+        even when nobody holds it. Returns False while the mouse owns the
+        cursor and the pen has not been moved, tapped or clicked since."""
+        if self.claim_anchor is None:
+            self.claim_anchor = self.raw_xy
+        pressure = self.absp.normalize(raw["p"]) if self.absp else 0.0
+        if (raw["lower"] or raw["upper"] or pressure > self.pressure.threshold
+                or self._dist_mm(self.raw_xy, self.claim_anchor) > RECLAIM_MM):
+            self.pen_used = True
+            self.mouse_owns = False
+        return not self.mouse_owns
+
+    def mouse_active(self):
+        """The real mouse moved (reported by the GNOME extension). The mouse
+        takes the cursor: the virtual pen leaves, so its cursor disappears and
+        it stops moving the pointer, until the pen is used on purpose again.
+        Ignored in the middle of a stroke or while a pen button is held."""
+        # Touch-mode momentum scrolls through the pointer at the pen's spot;
+        # stop it so it doesn't keep pulling the pointer away from the mouse.
+        self.momentum = None
+        if not self.prox or self.mouse_owns or self.mode != "pen":
+            return
+        if self.touching or self.contact or any(self.phys.values()):
+            return
+        self.pen_used = False  # no pointer warp as the virtual pen leaves
+        self._prox_out()
+        self.mouse_owns = True
+        self.claim_anchor = self.raw_xy
 
     def tick(self, now=None):
         """Advances time-based behavior: press-and-hold and momentum."""
@@ -670,7 +716,7 @@ class Engine:
         # Like on Windows, the pen also moves the system pointer while it
         # hovers, so the dock, hot corners and GNOME menus react to it. It does
         # not move while drawing.
-        if self.hover_pointer and not touch and not self.touching:
+        if self.hover_pointer and self.pen_used and not touch and not self.touching:
             self._sync_pointer((u, v))
 
     def _sync_pointer(self, uv, force=False):
@@ -704,7 +750,10 @@ class Engine:
         self.prox = False
         if self.mode == "pen":
             self.sink.pen(PenState(prox=False))
-            if self.last_pen_uv:
+            # Leave the mouse pointer where the pen was, but only if the pen
+            # was actually used: lifting a pen that just lay there must not
+            # yank the cursor away from the mouse.
+            if self.last_pen_uv and self.pen_used:
                 self._sync_pointer(self.last_pen_uv, force=True)
 
     # --- "Click to define" ------------------------------------------------

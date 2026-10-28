@@ -275,7 +275,7 @@ class PressureTestArea(Canvas):
             p.text(w / 2, h / 2, "Draw here with your pen", size=14, align=0.5, alpha=0.45)
         ink = p.color("fg", 0.9)
         for stroke in self.strokes:
-            for (x0, y0, p0), (x1, y1, p1) in zip(stroke, stroke[1:]):
+            for (x0, y0, p0), (x1, y1, p1) in zip(stroke, stroke[1:], strict=False):
                 p.stroke(p.polyline([(x0, y0), (x1, y1)]), ink, 1 + 14 * (p0 + p1) / 2)
         track = w - 2 * PAD - 20
         p.fill(p.rounded(PAD + 10, h - PAD - 16, track, 6, 3), p.color("fg", 0.1))

@@ -1,5 +1,7 @@
 # Trazo
 
+Last updated: 2026-10-28 07:16 AM CDT
+
 **Your Wacom tablet, finally at home on Linux.**
 
 Complete Wacom tablet settings for Linux, with the same features as Wacom Center on
@@ -34,7 +36,9 @@ GNOME 50 (Wayland).
 
 **Just like Windows and macOS**
 - The pen is also the mouse: one cursor, and the dock, hot corners and GNOME menus react
-  when the pen hovers over them.
+  when the pen hovers over them. The last device used on purpose owns the cursor: the mouse
+  always takes over, even with the pen lying on the tablet, and the pen takes the cursor
+  back as soon as it moves, taps or clicks.
 - Touch mode (like Windows Ink): tap = click, drag = scroll with momentum, press and
   hold = right click. Recommended for web browsers.
 - Tap ripples, a precision mode overlay and stroke smoothing.
@@ -77,7 +81,7 @@ and the radial menu.
 where you saved it:
 
 ```bash
-sudo apt install ./trazo_0.1.0_all.deb
+sudo apt install ./trazo_0.1.1_all.deb
 ```
 
 **Any other distribution (per-user install):** download `trazo-VERSION.tar.gz`, extract it
@@ -85,7 +89,7 @@ and run the installer as your normal user. It asks for your password once to ins
 permission rule (`/etc/udev/rules.d/70-trazo.rules`).
 
 ```bash
-tar xf trazo-0.1.0.tar.gz && cd trazo-0.1.0 && ./install.sh
+tar xf trazo-0.1.1.tar.gz && cd trazo-0.1.1 && ./install.sh
 ```
 
 Either way, log out and back in once to turn on the service and the GNOME extension.
